@@ -1,0 +1,53 @@
+package dev.nithin.userservice.controller;
+
+import dev.nithin.userservice.dto.*;
+import dev.nithin.userservice.exception.UserAlreadyExistsException;
+import dev.nithin.userservice.exception.UserNotFoundException;
+import dev.nithin.userservice.model.Token;
+import dev.nithin.userservice.model.User;
+import dev.nithin.userservice.service.UserService;
+import org.apache.el.parser.TokenMgrError;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+public class UserController {
+
+    UserService userService;
+
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
+
+    @PostMapping("/signup")
+    public ResponseEntity<SignUpResponseDto> signup(@RequestBody SignUpRequestDto signUpRequestDto) throws UserAlreadyExistsException {
+        User user = userService.signup(signUpRequestDto.getName(),
+                signUpRequestDto.getEmail(), signUpRequestDto.getPassword());
+        return new ResponseEntity<>(SignUpResponseDto.from(user), HttpStatus.CREATED);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponseDto> login(@RequestBody LoginRequestDto loginRequestDto) throws UserNotFoundException {
+        Token token = userService.login(loginRequestDto.getEmail(), loginRequestDto.getPassword());
+        return new ResponseEntity<>(LoginResponseDto.from(token), HttpStatus.OK);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@RequestBody LogoutRequestDto logoutRequestDto) throws UserNotFoundException {
+        userService.logout(logoutRequestDto.getToken());
+        return ResponseEntity.noContent().build(); // HTTP 204
+    }
+
+    @GetMapping("/validate/{token}")
+    public ResponseEntity<Boolean> validateToken(@PathVariable String token) throws UserNotFoundException {
+        User user = userService.validateToken(token);
+        ResponseEntity<Boolean> responseEntity;
+        if (user != null) {
+            responseEntity = ResponseEntity.ok(true);
+        } else {
+            responseEntity = ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(false);
+        }
+        return responseEntity;
+    }
+}
