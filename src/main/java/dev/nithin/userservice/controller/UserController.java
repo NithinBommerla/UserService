@@ -7,6 +7,7 @@ import dev.nithin.userservice.model.Token;
 import dev.nithin.userservice.model.User;
 import dev.nithin.userservice.service.UserService;
 import org.apache.el.parser.TokenMgrError;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -39,8 +40,12 @@ public class UserController {
         return ResponseEntity.noContent().build(); // HTTP 204
     }
 
-    @GetMapping("/validate/{token}")
-    public ResponseEntity<Boolean> validateToken(@PathVariable String token) throws UserNotFoundException {
+    @PostMapping("/validate")
+    public ResponseEntity<Boolean> validateToken(@RequestHeader(HttpHeaders.AUTHORIZATION) String token) throws UserNotFoundException {
+        if(token.startsWith("Bearer ")) {
+            // token = token.substring(7); // Remove "Bearer " prefix
+            token = token.replace("Bearer ", "");
+        }
         User user = userService.validateToken(token);
         ResponseEntity<Boolean> responseEntity;
         if (user != null) {
