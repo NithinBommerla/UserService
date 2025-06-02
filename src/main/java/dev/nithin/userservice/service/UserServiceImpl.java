@@ -27,7 +27,7 @@ public class UserServiceImpl implements UserService {
     // To avoid this we use a fixed secret key.
     // private static final SecretKey SECRET_KEY = Keys.hmacShaKeyFor("Secret_key_string".getBytes(StandardCharsets.UTF_8));
     // Instead of keeping the secret key here we can keep it in a config class of its own and reuse it across the application.
-    private static final long EXPIRATION_TIME_IN_MS = 30L * 24 * 60 * 60 * 1000; // 30 days in milliseconds
+    private static final long EXPIRATION_TIME_IN_MS = 10L * 60 * 60 * 1000; // 10 hours in milliseconds
 
     UserRepository userRepository;
     BCryptPasswordEncoder bCryptPasswordEncoder;

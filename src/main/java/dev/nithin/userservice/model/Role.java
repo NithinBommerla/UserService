@@ -9,5 +9,5 @@ import lombok.Setter;
 @Getter
 @Entity
 public class Role extends Base{
-    private int value;
+    private String value;
 }
