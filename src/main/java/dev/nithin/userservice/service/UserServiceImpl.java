@@ -1,5 +1,7 @@
 package dev.nithin.userservice.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.nithin.userservice.dto.SendEmailDto;
 import dev.nithin.userservice.exception.UserAlreadyExistsException;
 import dev.nithin.userservice.exception.UserNotFoundException;
 import dev.nithin.userservice.model.Token;
@@ -11,6 +13,8 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.kafka.common.network.Send;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -28,17 +32,21 @@ public class UserServiceImpl implements UserService {
     // private static final SecretKey SECRET_KEY = Keys.hmacShaKeyFor("Secret_key_string".getBytes(StandardCharsets.UTF_8));
     // Instead of keeping the secret key here we can keep it in a config class of its own and reuse it across the application.
     private static final long EXPIRATION_TIME_IN_MS = 10L * 60 * 60 * 1000; // 10 hours in milliseconds
+    private final ObjectMapper objectMapper;
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
     UserRepository userRepository;
     BCryptPasswordEncoder bCryptPasswordEncoder;
     TokenRepository tokenRepository;
     SecretKey secretKey;
 
-    public UserServiceImpl(UserRepository userRepository, TokenRepository tokenRepository, BCryptPasswordEncoder bCryptPasswordEncoder, SecretKey secretKey) { //
+    public UserServiceImpl(UserRepository userRepository, TokenRepository tokenRepository, BCryptPasswordEncoder bCryptPasswordEncoder, SecretKey secretKey, ObjectMapper objectMapper, KafkaTemplate<String, String> kafkaTemplate) { //
         this.userRepository = userRepository;
         this.bCryptPasswordEncoder = bCryptPasswordEncoder;
         this.tokenRepository = tokenRepository;
         this.secretKey = secretKey;
+        this.objectMapper = objectMapper;
+        this.kafkaTemplate = kafkaTemplate;
     }
 
     @Override
@@ -52,6 +60,21 @@ public class UserServiceImpl implements UserService {
         user.setName(name);
         user.setEmail(email);
         user.setPassword(bCryptPasswordEncoder.encode(password));
+
+        SendEmailDto sendEmailDto = new SendEmailDto();
+        sendEmailDto.setFrom("nithinbommerla99@gmail.com");
+        sendEmailDto.setTo(email);
+        sendEmailDto.setSubject("Welcome to User Service");
+        sendEmailDto.setBody("Hello " + name + ",\n\nThank you for signing up for our service. We are excited to have you on board!\n\nBest regards,\nUser Service Team");
+
+        String sendEmailDtoString;
+        try {
+            sendEmailDtoString = objectMapper.writeValueAsString(sendEmailDto);
+        } catch (Exception e) {
+            throw new RuntimeException("Error while converting SendEmailDto to JSON", e);
+        }
+
+        kafkaTemplate.send("send-email-topic", sendEmailDtoString);
         return userRepository.save(user);
     }
 
